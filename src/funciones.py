@@ -456,3 +456,36 @@ def escalar_columnas(df, columnas_numericas):
         df[nombres_columnas] = datos_transformados
     
     return df
+
+def escalar_columnas_metodo(df, columnas_numericas, metodo_escalador):
+    """
+    Escala directamente las columnas numéricas del DataFrame utilizando un método específico
+    y guarda el escalador utilizado en un archivo pickle.
+    
+    Args:
+    - df (pd.DataFrame): DataFrame original.
+    - columnas_numericas (list): Lista de nombres de columnas numéricas a escalar.
+    - metodo_escalador (str): Método de escalado a utilizar ('robust', 'minmax', 'norm', 'stand').
+    - archivo_pickle (str): Nombre del archivo donde se guardará el escalador.
+    
+    Returns:
+    - pd.DataFrame: DataFrame con las columnas numéricas escaladas.
+    """
+    # Inicializar los escaladores disponibles
+    escaladores = {
+        "robust": RobustScaler(),
+        "minmax": MinMaxScaler(),
+        "norm": Normalizer(),
+        "stand": StandardScaler()
+    }
+    
+    # Verificar si el método de escalado es válido
+    if metodo_escalador not in escaladores:
+        raise ValueError(f"El método '{metodo_escalador}' no es válido. Usa uno de: {list(escaladores.keys())}")
+    
+    # Seleccionar el escalador
+    scaler = escaladores[metodo_escalador]
+    
+    # Aplicar el escalado directamente a las columnas originales
+    df[columnas_numericas] = scaler.fit_transform(df[columnas_numericas])
+    return df
