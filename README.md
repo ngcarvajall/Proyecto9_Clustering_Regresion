@@ -11,3 +11,7 @@ Para hacer mi clusterizaicón tomé el siguiente abordaje, creando un nuevo data
 - compras_media = media de las ventas por cliente
 - beneficio_total = suma de todo el profit de las órdenes del cliente
 - costo_envio_medio = media del costo de envío por cliente
+
+Métodos mas semejantes a lo visualizado con los datos: k_means arrojó 2 clusters. Uno de 531 vs 264; el método de Ward con euclidian arrojó 278 vs 517.
+
+El método ard hace una separación más clara entre mis grupos de clientes.
