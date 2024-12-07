@@ -186,7 +186,7 @@ def visualizar_categoricas(dataframe, lista_col_cat, variable_respuesta, bigote=
         plt.tight_layout()
 
 def separar_dataframes(dataframe):
-    return dataframe.select_dtypes(include = np.number), dataframe.select_dtypes(include = 'O')
+    return dataframe.select_dtypes(include = np.number), dataframe.select_dtypes(include = ['O', 'category'])
 
 def plot_numericas(dataframe, figsize=(10,8)):
     cols_numericas = dataframe.columns

@@ -16,67 +16,227 @@ from itertools import combinations
 
 # Para pruebas estadísticas
 # -----------------------------------------------------------------------
-from scipy.stats import chi2_contingency
+from scipy import stats
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 # Para la codificación de las variables numéricas
 # -----------------------------------------------------------------------
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder # para poder aplicar los métodos de OneHot, Ordinal,  Label y Target Encoder 
-from category_encoders import TargetEncoder
-import pickle
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder, TargetEncoder # para poder aplicar los métodos de OneHot, Ordinal,  Label y Target Encoder 
 
-class AnalisisChiCuadrado:
-    def __init__(self, dataframe, variable_predictora, variable_respuesta):
+class Asunciones:
+    def __init__(self, dataframe, columna_numerica):
+
+        self.dataframe = dataframe
+        self.columna_numerica = columna_numerica
+        
+    
+
+    def identificar_normalidad(self, metodo='shapiro', alpha=0.05, verbose=True):
         """
-        Inicializa la clase con el DataFrame y las dos columnas a analizar.
+        Evalúa la normalidad de una columna de datos de un DataFrame utilizando la prueba de Shapiro-Wilk o Kolmogorov-Smirnov.
+
+        Parámetros:
+            metodo (str): El método a utilizar para la prueba de normalidad ('shapiro' o 'kolmogorov').
+            alpha (float): Nivel de significancia para la prueba.
+            verbose (bool): Si se establece en True, imprime el resultado de la prueba. Si es False, Returns el resultado.
+
+        Returns:
+            bool: True si los datos siguen una distribución normal, False de lo contrario.
+        """
+
+        if metodo == 'shapiro':
+            _, p_value = stats.shapiro(self.dataframe[self.columna_numerica])
+            resultado = p_value > alpha
+            mensaje = f"los datos siguen una distribución normal según el test de Shapiro-Wilk." if resultado else f"los datos no siguen una distribución normal según el test de Shapiro-Wilk."
+        
+        elif metodo == 'kolmogorov':
+            _, p_value = stats.kstest(self.dataframe[self.columna_numerica], 'norm')
+            resultado = p_value > alpha
+            mensaje = f"los datos siguen una distribución normal según el test de Kolmogorov-Smirnov." if resultado else f"los datos no siguen una distribución normal según el test de Kolmogorov-Smirnov."
+        else:
+            raise ValueError("Método no válido. Por favor, elige 'shapiro' o 'kolmogorov'.")
+
+        if verbose:
+            print(f"Para la columna {self.columna_numerica}, {mensaje}")
+        else:
+            return resultado
+
+        
+    def identificar_homogeneidad (self,  columna_categorica):
+        
+        """
+        Evalúa la homogeneidad de las varianzas entre grupos para una métrica específica en un DataFrame dado.
+
+        Parámetros:
+        - columna (str): El nombre de la columna que se utilizará para dividir los datos en grupos.
+        - columna_categorica (str): El nombre de la columna que se utilizará para evaluar la homogeneidad de las varianzas.
+
+        Returns:
+        No Returns nada directamente, pero imprime en la consola si las varianzas son homogéneas o no entre los grupos.
+        Se utiliza la prueba de Levene para evaluar la homogeneidad de las varianzas. Si el valor p resultante es mayor que 0.05,
+        se concluye que las varianzas son homogéneas; de lo contrario, se concluye que las varianzas no son homogéneas.
+        """
+        
+        # lo primero que tenemos que hacer es crear tantos conjuntos de datos para cada una de las categorías que tenemos, Control Campaign y Test Campaign
+        valores_evaluar = []
+        
+        for valor in self.dataframe[columna_categorica].unique():
+            valores_evaluar.append(self.dataframe[self.dataframe[columna_categorica]== valor][self.columna_numerica])
+
+        statistic, p_value = stats.levene(*valores_evaluar)
+        if p_value > 0.05:
+            print(f"En la variable {columna_categorica} las varianzas son homogéneas entre grupos.")
+        else:
+            print(f"En la variable {columna_categorica} las varianzas NO son homogéneas entre grupos.")
+
+
+
+
+class TestEstadisticos:
+    def __init__(self, dataframe, variable_respuesta, columna_categorica):
+        """
+        Inicializa la instancia de la clase TestEstadisticos.
 
         Parámetros:
         - dataframe: DataFrame de pandas que contiene los datos.
-        - columna1: Nombre de la primera columna (por ejemplo, la variable dependiente).
-        - columna2: Nombre de la segunda columna (por ejemplo, la variable categórica).
+        - variable_respuesta: Nombre de la variable respuesta.
+        - columna_categorica: Nombre de la columna que contiene las categorías para comparar.
         """
         self.dataframe = dataframe
-        self.variable_predictora = variable_predictora
         self.variable_respuesta = variable_respuesta
-        self.tabla_contingencia = None
-        self.resultado_chi2 = None
+        self.columna_categorica = columna_categorica
 
-    def generar_tabla_contingencia(self):
+    def generar_grupos(self):
         """
-        Genera una tabla de contingencia para las dos columnas especificadas.
+        Genera grupos de datos basados en la columna categórica.
 
         Retorna:
-        - pandas.DataFrame: La tabla de contingencia.
+        Una lista de nombres de las categorías.
         """
-        self.tabla_contingencia = pd.crosstab(self.dataframe[self.variable_respuesta], self.dataframe[self.variable_predictora])
-        print("Tabla de contingencia:")
-        display(self.tabla_contingencia)
-        return self.tabla_contingencia
+        lista_categorias =[]
+    
+        for value in self.dataframe[self.columna_categorica].unique():
+            variable_name = value  # Asigna el nombre de la variable
+            variable_data = self.dataframe[self.dataframe[self.columna_categorica] == value][self.variable_respuesta].values.tolist()
+            globals()[variable_name] = variable_data  
+            lista_categorias.append(variable_name)
+    
+        return lista_categorias
 
-    def realizar_prueba_chi_cuadrado(self):
+    def comprobar_pvalue(self, pvalor):
         """
-        Realiza la prueba de Chi-cuadrado para la tabla de contingencia generada.
+        Comprueba si el valor p es significativo.
 
+        Parámetros:
+        - pvalor: Valor p obtenido de la prueba estadística.
+        """
+        if pvalor < 0.05:
+            print("Hay una diferencia significativa entre los grupos")
+        else:
+            print("No hay evidencia suficiente para concluir que hay una diferencia significativa.")
+
+    def test_manwhitneyu(self, categorias): # SE PUEDE USAR SOLO PARA COMPARAR DOS GRUPOS, PERO NO ES NECESARIO QUE TENGAN LA MISMA CANTIDAD DE VALORES
+        """
+        Realiza el test de Mann-Whitney U.
+
+        Parámetros:
+        - categorias: Lista de nombres de las categorías a comparar.
+        """
+        statistic, p_value = stats.mannwhitneyu(*[globals()[var] for var in categorias])
+
+        print("Estadístico del Test de Mann-Whitney U:", statistic)
+        print("Valor p:", p_value)
+
+        self.comprobar_pvalue(p_value)
+
+    def test_wilcoxon(self, categorias): # SOLO LO PODEMOS USAR SI QUEREMOS COMPARAR DOS CATEGORIAS Y SI TIENEN LA MISMA CANTIDAD DE VALORES 
+        """
+        Realiza el test de Wilcoxon.
+
+        Parámetros:
+        - categorias: Lista de nombres de las categorías a comparar.
+        """
+        statistic, p_value = stats.wilcoxon(*[globals()[var] for var in categorias])
+
+        print("Estadístico del Test de Wilcoxon:", statistic)
+        print("Valor p:", p_value)
+
+        # Imprime el estadístico y el valor p
+        print("Estadístico de prueba:", statistic)
+        print("Valor p:", p_value) 
+
+        self.comprobar_pvalue(p_value)
+
+    def test_kruskal(self, categorias):
+       """
+       Realiza el test de Kruskal-Wallis.
+
+       Parámetros:
+       - categorias: Lista de nombres de las categorías a comparar.
+       """
+       statistic, p_value = stats.kruskal(*[globals()[var] for var in categorias])
+
+       print("Estadístico de prueba:", statistic)
+       print("Valor p:", p_value)
+
+       self.comprobar_pvalue(p_value)
+
+    
+    def test_anova(self, categorias):
+        """
+        Realiza el test ANOVA.
+
+        Parámetros:
+        - categorias: Lista de nombres de las categorías a comparar.
+        """
+        statistic, p_value = stats.f_oneway(*[globals()[var] for var in categorias])
+
+        print("Estadístico F:", statistic)
+        print("Valor p:", p_value)
+
+        self.comprobar_pvalue(p_value)
+
+    def post_hoc(self):
+        """
+        Realiza el test post hoc de Tukey.
+        
         Retorna:
-        - dict: Un diccionario con los resultados de la prueba (chi2, p-valor, grados de libertad, tabla esperada).
+        Un DataFrame con las diferencias significativas entre los grupos.
         """
-        if self.tabla_contingencia is None:
-            raise ValueError("Primero debes generar la tabla de contingencia utilizando 'generar_tabla_contingencia'.")
+        resultado_posthoc =  pairwise_tukeyhsd(self.dataframe[self.variable_respuesta], self.dataframe[self.columna_categorica])
+        tukey_df =  pd.DataFrame(data=resultado_posthoc._results_table.data[1:], columns=resultado_posthoc._results_table.data[0])
+        tukey_df['group_diff'] = tukey_df['group1'] + '-' + tukey_df['group2']
+        return tukey_df[['meandiff', 'p-adj', 'lower', 'upper', 'group_diff']]
 
-        chi2, p, dof, expected = chi2_contingency(self.tabla_contingencia)
-        self.resultado_chi2 = {
-            "Chi2": chi2,
-            "p_valor": p
+    def run_all_tests(self):
+        """
+        Ejecuta todos los tests estadísticos disponibles en la clase.
+
+        Parámetros:
+        - categorias: Lista de nombres de las categorías a comparar.
+        """
+        print("Generando grupos...")
+        categorias_generadas = self.generar_grupos()
+        print("Grupos generados:", categorias_generadas)
+
+
+        test_methods = {
+            "mannwhitneyu": self.test_manwhitneyu,
+            "wilcoxon": self.test_wilcoxon,
+            "kruskal": self.test_kruskal,
+            "anova": self.test_anova
         }
 
-        print(f"\nResultado de la prueba de Chi-cuadrado:")
-        print(f"Chi2: {chi2}, p-valor: {p}")
-        
-        # Interpretación del p-valor
-        if p < 0.05:
-            print("El p-valor < 0.05, parece que hay diferencias entre los grupos.")
+        test_choice = input("¿Qué test desea realizar? (mannwhitneyu, wilcoxon, kruskal, anova): ").strip().lower()
+        test_method = test_methods.get(test_choice)
+        if test_method:
+            print(f"\nRealizando test de {test_choice.capitalize()}...")
+            test_method(categorias_generadas)
         else:
-            print("El p-valor >= 0.05, no hay diferencias entre los grupos.")
-
+            print("Opción de test no válida.")
+        
+        print("Los resultados del test de Tukey son: \n")
+        display(self.post_hoc())
 
 class Encoding:
     """
@@ -96,7 +256,7 @@ class Encoding:
         - frequency_encoding(): Realiza codificación de frecuencia en las columnas especificadas en el diccionario de codificación.
     """
 
-    def __init__(self, dataframe, variable_respuesta, diccionario_encoding):
+    def __init__(self, dataframe, diccionario_encoding, variable_respuesta):
         self.dataframe = dataframe
         self.diccionario_encoding = diccionario_encoding
         self.variable_respuesta = variable_respuesta
@@ -126,11 +286,7 @@ class Encoding:
 
             # concatenamos los resultados obtenidos en la transformación con el DataFrame original
             self.dataframe = pd.concat([self.dataframe.reset_index(drop=True), oh_df.reset_index(drop=True)], axis=1)
-        
-        self.dataframe.drop(columns=col_encode, inplace=True)
-        # Guardar el modelo
-        with open('transformer_one.pkl', 'wb') as f:
-            pickle.dump(one_hot_encoder, f)
+    
         return self.dataframe
     
     def get_dummies(self, prefix='category', prefix_sep="_"):
@@ -229,15 +385,23 @@ class Encoding:
 
         # si hay contenido en la lista 
         if col_encode:
-            print(col_encode)
-  
-            target_encoder = TargetEncoder(cols=col_encode)
-            variables_encoded = target_encoder.fit_transform(self.dataframe, self.dataframe[self.variable_respuesta])
-        # Guardar el modelo
-        with open('transformer_target.pkl', 'wb') as f:
-            pickle.dump(target_encoder, f)
+
+            # instanciamos la clase 
+            target_encoder = TargetEncoder(smooth="auto")
+
+            # transformamos los datos de las columnas almacenadas en la variable col_code y añadimos la variable respuesta para que calcule la media ponderada para cada categória de las variables
+            target_encoder_trans = target_encoder.fit_transform(self.dataframe[col_encode], self.dataframe[[self.variable_respuesta]])
             
-        return variables_encoded
+            # creamos un DataFrame con los resultados de la transformación
+            target_encoder_df = pd.DataFrame(target_encoder_trans, columns=target_encoder.get_feature_names_out())
+
+            # eliminamos las columnas originales
+            self.dataframe.drop(col_encode, axis=1, inplace=True)
+
+            # concatenamos los dos DataFrames
+            self.dataframe = pd.concat([self.dataframe.reset_index(drop=True), target_encoder_df], axis=1)
+
+        return self.dataframe
 
     def frequency_encoding(self):
         """
