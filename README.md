@@ -14,4 +14,8 @@ Para hacer mi clusterizaicón tomé el siguiente abordaje, creando un nuevo data
 
 Métodos mas semejantes a lo visualizado con los datos: k_means arrojó 2 clusters. Uno de 531 vs 264; el método de Ward con euclidian arrojó 278 vs 517.
 
-El método ard hace una separación más clara entre mis grupos de clientes.
+El método ward hace una separación más clara entre mis grupos de clientes.
+
+En mi primer modelo, con solo una variable numérica obtuve resultados con underfitting. Esto me arroja que debo brindarle más datos a mi modelo para que pueda aprender mejor y no sea tan generalizado.
+
+En el segundo modelo, di entrada a otras 2 nuevas columnas demográficas, para que pueda obtener más información de mis datos. Esto mejoró las métricas del modelo. Además, para este modelo toqué algunos outliers para ver el cambio que producía.
