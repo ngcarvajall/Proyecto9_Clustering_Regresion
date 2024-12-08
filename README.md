@@ -12,10 +12,12 @@ Para hacer mi clusterizaicón tomé el siguiente abordaje, creando un nuevo data
 - beneficio_total = suma de todo el profit de las órdenes del cliente
 - costo_envio_medio = media del costo de envío por cliente
 
-Métodos mas semejantes a lo visualizado con los datos: k_means arrojó 2 clusters. Uno de 531 vs 264; el método de Ward con euclidian arrojó 278 vs 517.
+Métodos mas semejantes a lo visualizado con los datos: k_means arrojó 2 clusters. Uno de 531 vs 264; el método de Ward con euclidian arrojó 278 vs 517. El método ward hace una separación más clara entre mis grupos de clientes. Esta separación estuvo marcada por los clientes que consumen más por encima de aquellos que consumen menos. En resumen, el grupo con menor cantidad es el que más gastos tiene en Sales al igual que en casi todas las otras variables numéricas. 
 
-El método ward hace una separación más clara entre mis grupos de clientes.
+En mi primer modelo, 
+    - para el Cluster_0: con solo una variable numérica obtuve resultados con underfitting. Esto me arroja que debo brindarle más datos a mi modelo para que pueda aprender mejor y no sea tan generalizado.
+    - para el Cluster_1: 
 
-En mi primer modelo, con solo una variable numérica obtuve resultados con underfitting. Esto me arroja que debo brindarle más datos a mi modelo para que pueda aprender mejor y no sea tan generalizado.
+En el segundo modelo, di entrada a otras 2 nuevas columnas demográficas, para que pueda obtener más información de mis datos. Esto mejoró las métricas del modelo.
 
-En el segundo modelo, di entrada a otras 2 nuevas columnas demográficas, para que pueda obtener más información de mis datos. Esto mejoró las métricas del modelo. Además, para este modelo toqué algunos outliers para ver el cambio que producía.
+En el tercer modelo, mantengo las 2 nuevas columnas demográficas (Region y Country), para que pueda obtener más información de mis datos. Además, dejé la variables Quantity como numérica. En este caso, viendo la interacción de Sales con Shipping Cost, quité una serie de outliers. Con todo esto, mis métricas mejoraron su error (r2) aunque los valores de RMSE son algo elevados.
